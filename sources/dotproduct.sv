@@ -9,58 +9,125 @@ Code Written by: Sorty MMith (sortymmith@outlook.com)
 15 Nov 2019
 */
 module dotproduct #( parameter Q = 15,	parameter N = 32, parameter H = 10 ) //Parameterized values 
-(
-input logic clk,
-input logic start_dot,
-input logic [N-1:0] a_vec [H-1:0],
-input logic [N-1:0] b_vec [H-1:0],
-output logic [N-1:0] result
-);
-// following holds result of each product between elements of a and b vectors
-logic [N-1:0] temp_product [H-1:0];
-//following checks if each product is complete
-logic [H-1:0] is_complete;
-// following checks if there is any overflow in any of the product
-logic [H-1:0] is_overflow;
-// our temp result value
-logic [N-1:0] temp_result[H-1:0];
-integer i;
+					(
+					input logic clk,
+					input logic start_dot,
+					input logic [N-1:0] a_vec [H-1:0],
+					input logic [N-1:0] b_vec [H-1:0],
+					output logic [N-1:0] result,
+					output logic done
+					);
+	//following will hold the element wise multiplication result of the two vectors
+	logic [N-1:0] products[H-1:0];
+	//following will come from prodOfVectors that will indicate the elementwise product completion
+	logic prod_complete;
+	//following will hold the done signal indicator
+	logic sum_complete;
+	//following will hold the final result value
+	logic [N-1:0] sum_val;
+	//following will count the number of times addition was performed
+	integer Count;
+	
+	//instantiate element wise product of vectors here
+	prodof2Vectors #(Q,N,H) pod (
+								.clk(clk),
+								.startMult(start_dot),
+								.a_vec(a_vec),
+								.b_vec(b_vec),
+								.result(products),
+								.done(prod_complete)
+								);
+	
+	sumOfVectorElements #(Q,N,H) sov (
+							.clk(clk),
+							.start(prod_complete),
+							.a_vec(products),
+							.done(sum_complete)
+							);
 
-//temp_sum is what will be assigne to result
-assign result = (&is_complete)?temp_result[H-1]:0;
+endmodule
 
-// since we have parameterized length of vector, let us use for loop to dynamically create 
-// .. logics that will compute product of each elements of the two input arrays
-	qmults #(Q,N) qH (
-					.i_multiplicand(a_vec[H-1]),
-					.i_multiplier(b_vec[H-1]),
-					.i_start(start_dot),
-					.i_clk(clk),
-					.o_result(temp_product[H-1]),
-					.o_complete(is_complete[H-1]),
-					.o_overflow(is_overflow[H-1])
+/*
+Following module computes the sum of all the elements in an array supplied.
+*/
+modle sumOfVectorElements #( parameter Q = 15,	parameter N = 32, parameter H = 10 
+					(input logic clk, start,
+					input [N-1:0] a_vec[H-1:0],
+					output [N-1:0] result,
+					output logic done
 					);
-	qadd #(Q,N) qA (
-					.a(temp_product[H-1]),
-					.b(temp_result[H-2]),
-					.c(temp_result[H-1])
+	
+	logic [N-1:0] sum[H-2:0];
+	integer count,next_count;
+	
+	qadd #(Q,N) qa0 (
+					.a(a_vec[0]),
+					.b(a_vec[1]),
+					.c(sum[0])
 					);
-genvar gi;
-for(gi=0;gi<H-1;gi+=1) begin: dp
-	qmults #(Q,N) q1 (
-					.i_multiplicand(a_vec[gi]),
-					.i_multiplier(b_vec[gi]),
-					.i_start(start_dot),
-					.i_clk(clk),
-					.o_result(temp_product[gi]),
-					.o_complete(is_complete[gi]),
-					.o_overflow(is_overflow[gi])
-					);
-	qadd #(Q,N) d1 (
-					.a(temp_product[gi]),
-					.b(temp_product[gi+1),
-					.c(temp_result[gi])
-					);
-end
+					
+	genvar gi;
+	for(gi=2;gi<H;gi = gi+1) begin: sv
+		qadd #(Q,N) qa (.a(sum[gi-2]),
+						.b(a_vec[gi]),
+						.c(sum[qi-1])
+						);
+	end
+	
+	//let us have a logic to count and predict when the sum if found out 
+	always@(posedge clk)
+	begin
+		if(start)
+		begin
+			if(done==1'b1)
+			begin
+				next_count<=0;
+				done<=1'b0;
+			end
+			else if(count<H)
+				next_count = count+1;
+			else
+				done <= 1'b1;				
+		end
+	end
+	
+	always_comb
+	begin
+		count<=next_count;
+	end
+	
+endmodule					
+/*
+Following module computes multiplication of each elements of hte two input arrays and populates the output array.
+After the multiplication is complete, the output logic signal done is asserted high.
 
+Read the result from the result register when the done signal is high.
+*/
+module prodof2Vectors #( parameter Q = 15,	parameter N = 32, parameter H = 10 
+					(input logic clk, startMult
+					input [N-1:0] a_vec[H-1:0],
+					input [N-1:0] b_vec[H-1:0],
+					output [N-1:0] result[H-1:0],
+					output logic done
+					);
+
+	logic [H-1:0] is_complete;
+	logic [H-1:0] is_overflow;
+	
+	assign done = (&is_complete)?1'b1:1'b0;
+
+	//create parallel logic so that all the multiplication is performed at once
+	// .. this will be true since there is no dependency between the results
+	genvar gi;
+	for(gi=0;gi<H;gi=gi+1) begin: mp
+		qmults #(Q,N) q1 (
+						.i_multiplicand(a_vec[gi]),
+						.i_multiplier(b_vec[gi]),
+						.i_start(startMult),
+						.i_clk(clk),
+						.o_result(result[gi]),
+						.o_complete(is_complete[gi]),
+						.o_overflow(is_overflow[gi])
+					);		
+	end
 endmodule
