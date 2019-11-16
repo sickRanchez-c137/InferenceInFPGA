@@ -50,7 +50,7 @@ endmodule
 /*
 Following module computes the sum of all the elements in an array supplied.
 */
-modle sumOfVectorElements #( parameter Q = 15,	parameter N = 32, parameter H = 10 
+module sumOfVectorElements #( parameter Q = 15,	parameter N = 32, parameter H = 10) 
 					(input logic clk, start,
 					input [N-1:0] a_vec[H-1:0],
 					output [N-1:0] result,
@@ -67,13 +67,21 @@ modle sumOfVectorElements #( parameter Q = 15,	parameter N = 32, parameter H = 1
 					);
 					
 	genvar gi;
-	for(gi=2;gi<H;gi = gi+1) begin: sv
+	generate
+	for(gi=2;gi<H-1;gi = gi+1) begin: sv
 		qadd #(Q,N) qa (.a(sum[gi-2]),
 						.b(a_vec[gi]),
-						.c(sum[qi-1])
+						.c(sum[gi-1])
 						);
 	end
+	endgenerate
 	
+	qadd #(Q,N) qah (
+				.a(sum[H-3]),
+				.b(sum[H-2]),
+				.c(result)
+				);
+
 	//let us have a logic to count and predict when the sum if found out 
 	always@(posedge clk)
 	begin
@@ -103,8 +111,8 @@ After the multiplication is complete, the output logic signal done is asserted h
 
 Read the result from the result register when the done signal is high.
 */
-module prodof2Vectors #( parameter Q = 15,	parameter N = 32, parameter H = 10 
-					(input logic clk, startMult
+module prodof2Vectors #( parameter Q = 15,	parameter N = 32, parameter H = 10)
+					(input logic clk, startMult,
 					input [N-1:0] a_vec[H-1:0],
 					input [N-1:0] b_vec[H-1:0],
 					output [N-1:0] result[H-1:0],
@@ -119,15 +127,17 @@ module prodof2Vectors #( parameter Q = 15,	parameter N = 32, parameter H = 10
 	//create parallel logic so that all the multiplication is performed at once
 	// .. this will be true since there is no dependency between the results
 	genvar gi;
+	generate
 	for(gi=0;gi<H;gi=gi+1) begin: mp
 		qmults #(Q,N) q1 (
 						.i_multiplicand(a_vec[gi]),
 						.i_multiplier(b_vec[gi]),
 						.i_start(startMult),
 						.i_clk(clk),
-						.o_result(result[gi]),
+						.o_result_out(result[gi]),
 						.o_complete(is_complete[gi]),
 						.o_overflow(is_overflow[gi])
 					);		
 	end
+	endgenerate
 endmodule
