@@ -8,28 +8,28 @@ Parameters: Q: size of fractional part, N: width of each data, H: size of the ve
 Code Written by: Sorty MMith (sortymmith@outlook.com)
 15 Nov 2019
 */
-module dotproduct #( parameter Q = 15,	parameter N = 32, parameter H = 10 ) //Parameterized values 
+module dotproduct #( parameter FRACTION_WIDTH = 15,	parameter BIT_WIDTH = 32, parameter VECTOR_SIZE = 10 ) //Parameterized values 
 					(
 					input logic clk,
 					input logic start_dot,
-					input logic [N-1:0] a_vec [H-1:0],
-					input logic [N-1:0] b_vec [H-1:0],
-					output logic [N-1:0] result,
+					input logic [BIT_WIDTH-1:0] a_vec [VECTOR_SIZE-1:0],
+					input logic [BIT_WIDTH-1:0] b_vec [VECTOR_SIZE-1:0],
+					output logic [BIT_WIDTH-1:0] result,
 					output logic done
 					);
 	//following will hold the element wise multiplication result of the two vectors
-	logic [N-1:0] products[H-1:0];
+	logic [BIT_WIDTH-1:0] products[VECTOR_SIZE-1:0];
 	//following will come from prodOfVectors that will indicate the elementwise product completion
 	logic prod_complete;
 	//following will hold the done signal indicator
 	logic sum_complete;
 	//following will hold the final result value
-	logic [N-1:0] sum_val;
+	logic [BIT_WIDTH-1:0] sum_val;
 	//following will count the number of times addition was performed
 	integer Count;
 	
 	//instantiate element wise product of vectors here
-	prodof2Vectors #(Q,N,H) pod (
+	prodof2Vectors #(FRACTION_WIDTH,BIT_WIDTH,VECTOR_SIZE) pod (
 								.clk(clk),
 								.startMult(start_dot),
 								.a_vec(a_vec),
@@ -38,29 +38,31 @@ module dotproduct #( parameter Q = 15,	parameter N = 32, parameter H = 10 ) //Pa
 								.done(prod_complete)
 								);
 	
-	sumOfVectorElements #(Q,N,H) sov (
+	sumOfVectorElements #(FRACTION_WIDTH,BIT_WIDTH,VECTOR_SIZE) sov (
 							.clk(clk),
 							.start(prod_complete),
 							.a_vec(products),
+							.result(result),
 							.done(sum_complete)
 							);
+	assign done = sum_complete;
 
 endmodule
 
 /*
 Following module computes the sum of all the elements in an array supplied.
 */
-module sumOfVectorElements #( parameter Q = 15,	parameter N = 32, parameter H = 10) 
+module sumOfVectorElements #( parameter FRACTION_WIDTH = 15,	parameter BIT_WIDTH = 32, parameter VECTOR_SIZE = 10) 
 					(input logic clk, start,
-					input [N-1:0] a_vec[H-1:0],
-					output [N-1:0] result,
+					input [BIT_WIDTH-1:0] a_vec[VECTOR_SIZE-1:0],
+					output [BIT_WIDTH-1:0] result,
 					output logic done
 					);
 	
-	logic [N-1:0] sum[H-2:0];
+	logic [BIT_WIDTH-1:0] sum[VECTOR_SIZE-2:0];
 	integer count,next_count;
 	
-	qadd #(Q,N) qa0 (
+	qadd #(FRACTION_WIDTH,BIT_WIDTH) qa0 (
 					.a(a_vec[0]),
 					.b(a_vec[1]),
 					.c(sum[0])
@@ -68,17 +70,17 @@ module sumOfVectorElements #( parameter Q = 15,	parameter N = 32, parameter H = 
 					
 	genvar gi;
 	generate
-	for(gi=2;gi<H-1;gi = gi+1) begin: sv
-		qadd #(Q,N) qa (.a(sum[gi-2]),
+	for(gi=2;gi<VECTOR_SIZE-1;gi = gi+1) begin: sv
+		qadd #(FRACTION_WIDTH,BIT_WIDTH) qa (.a(sum[gi-2]),
 						.b(a_vec[gi]),
 						.c(sum[gi-1])
 						);
 	end
 	endgenerate
 	
-	qadd #(Q,N) qah (
-				.a(sum[H-3]),
-				.b(sum[H-2]),
+	qadd #(FRACTION_WIDTH,BIT_WIDTH) qah (
+				.a(sum[VECTOR_SIZE-3]),
+				.b(sum[VECTOR_SIZE-2]),
 				.c(result)
 				);
 
@@ -92,7 +94,7 @@ module sumOfVectorElements #( parameter Q = 15,	parameter N = 32, parameter H = 
 				next_count<=0;
 				done<=1'b0;
 			end
-			else if(count<H)
+			else if(count<VECTOR_SIZE)
 				next_count = count+1;
 			else
 				done <= 1'b1;				
@@ -111,16 +113,16 @@ After the multiplication is complete, the output logic signal done is asserted h
 
 Read the result from the result register when the done signal is high.
 */
-module prodof2Vectors #( parameter Q = 15,	parameter N = 32, parameter H = 10)
+module prodof2Vectors #( parameter FRACTION_WIDTH = 15,	parameter BIT_WIDTH = 32, parameter VECTOR_SIZE = 10)
 					(input logic clk, startMult,
-					input [N-1:0] a_vec[H-1:0],
-					input [N-1:0] b_vec[H-1:0],
-					output [N-1:0] result[H-1:0],
+					input [BIT_WIDTH-1:0] a_vec[VECTOR_SIZE-1:0],
+					input [BIT_WIDTH-1:0] b_vec[VECTOR_SIZE-1:0],
+					output [BIT_WIDTH-1:0] result[VECTOR_SIZE-1:0],
 					output logic done
 					);
 
-	logic [H-1:0] is_complete;
-	logic [H-1:0] is_overflow;
+	logic [VECTOR_SIZE-1:0] is_complete;
+	logic [VECTOR_SIZE-1:0] is_overflow;
 	
 	assign done = (&is_complete)?1'b1:1'b0;
 
@@ -128,8 +130,8 @@ module prodof2Vectors #( parameter Q = 15,	parameter N = 32, parameter H = 10)
 	// .. this will be true since there is no dependency between the results
 	genvar gi;
 	generate
-	for(gi=0;gi<H;gi=gi+1) begin: mp
-		qmults #(Q,N) q1 (
+	for(gi=0;gi<VECTOR_SIZE;gi=gi+1) begin: mp
+		qmults #(FRACTION_WIDTH,BIT_WIDTH) q1 (
 						.i_multiplicand(a_vec[gi]),
 						.i_multiplier(b_vec[gi]),
 						.i_start(startMult),

@@ -11,14 +11,14 @@ Code Written by: Sorty MMith (sortymmith@outlook.com)
 15 Nov 2019
 */
 
-module matmul #(parameter Q = 15, parameter N = 32,
+module matmul #(parameter FRACTION_WIDTH = 15, parameter BIT_WIDTH = 32,
 				parameter d1 = 5, parameter d2 = 5,
 				parameter d3 = 5)
 (
 	input logic clk,start,
-	input logic [N-1:0] matA[d1-1:0][d2-1:0],
-	input logic [N-1:0] matB[d2-1:0][d3-1:0],
-	output logic [N-1:0] result[d1-1:0][d3-1:0],
+	input logic [BIT_WIDTH-1:0] matA[d1-1:0][d2-1:0],
+	input logic [BIT_WIDTH-1:0] matB[d2-1:0][d3-1:0],
+	output logic [BIT_WIDTH-1:0] result[d1-1:0][d3-1:0],
 	output logic done
 );
 			
@@ -26,7 +26,7 @@ module matmul #(parameter Q = 15, parameter N = 32,
 		logic [d2-1:0] done_in[d1-1:0];
 		logic [d1-1:0] done_check;
 		
-		logic [N-1:0] matB_in[d3-1:0][d2-1:0];
+		logic [BIT_WIDTH-1:0] matB_in[d3-1:0][d2-1:0];
 		
 		//assign done output
 		genvar dn;
@@ -39,7 +39,7 @@ module matmul #(parameter Q = 15, parameter N = 32,
 		assign done = (&done_check)?1'b1:1'b0;
 		
 		// the matrix B to send to multiply is essentially transpose of the input matrix matB
-		transpose #(Q,N,d2,d3) transp(
+		transpose #(FRACTION_WIDTH,BIT_WIDTH,d2,d3) transp(
 										.inMat(matB),
 										.outMat(matB_in)
 									);
@@ -49,7 +49,7 @@ module matmul #(parameter Q = 15, parameter N = 32,
 		generate
 		for(i=0;i<d1;i = i+1) begin: row
 			for(j=0;j<d3;j = j+1) begin: col
-				dotproduct #(Q,N,d2) dp(
+				dotproduct #(FRACTION_WIDTH,BIT_WIDTH,d2) dp(
 										.clk(clk),
 										.start_dot(start),
 										.a_vec(matA[i]),
@@ -64,11 +64,11 @@ module matmul #(parameter Q = 15, parameter N = 32,
 endmodule
 
 //following module finds the transpose of the input matrix
-module transpose #(parameter Q = 15, parameter N = 32, 
+module transpose #(parameter FRACTION_WIDTH = 15, parameter BIT_WIDTH = 32, 
 						parameter dRowIn = 5, parameter dColIn = 5)
 (
-input logic [N-1:0] inMat[dRowIn-1:0][dColIn-1:0],
-output logic [N-1:0] outMat[dColIn-1:0][dRowIn-1:0]
+input logic [BIT_WIDTH-1:0] inMat[dRowIn-1:0][dColIn-1:0],
+output logic [BIT_WIDTH-1:0] outMat[dColIn-1:0][dRowIn-1:0]
 );
 	genvar i,j;
 	generate
