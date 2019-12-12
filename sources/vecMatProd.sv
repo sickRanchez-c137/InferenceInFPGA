@@ -36,8 +36,84 @@ module vecMatProd #(parameter FRACTION_WIDTH = 15, parameter BIT_WIDTH = 32,
 		genvar i,j;
 		// we will lay out a collection of dot products since the result of matrix multiplication is a collection of dot products
 		generate
-			for(j=0;j<NUM_COL_MAT;j = j+1) begin: col
+			for(j=0;j<NUM_COL_MAT;j = j+1) begin: col_mat
 				dotproduct #(FRACTION_WIDTH,BIT_WIDTH,NUM_COL_VEC) dp(
+										.clk(clk),
+										.start_dot(start),
+										.a_vec(matA),
+										.b_vec(matB_in[j]),
+										.result(result[j]),
+										.done(done_check[j])
+										); 
+		end
+		endgenerate
+		
+endmodule
+module vecMatProdInput #(parameter FRACTION_WIDTH = 15, parameter BIT_WIDTH = 32,
+				parameter NUM_COL_VEC = 5,	parameter NUM_COL_MAT = 5)
+(
+	input logic clk,start,
+	input logic [BIT_WIDTH-1:0] matA[NUM_COL_VEC-1:0],
+	input logic [BIT_WIDTH-1:0] matB[NUM_COL_VEC-1:0][NUM_COL_MAT-1:0],
+	output logic [BIT_WIDTH-1:0] result[NUM_COL_MAT-1:0],
+	output logic done
+);
+			
+		//check internal done signals
+		logic [NUM_COL_MAT-1:0] done_check;		
+		logic [BIT_WIDTH-1:0] matB_in[NUM_COL_MAT-1:0][NUM_COL_VEC-1:0];
+		
+		assign done = (&done_check)?1'b1:1'b0;
+		
+		// the matrix B to send to multiply is essentially transpose of the input matrix matB
+		transpose #(FRACTION_WIDTH,BIT_WIDTH,NUM_COL_VEC,NUM_COL_MAT) transp(
+										.inMat(matB),
+										.outMat(matB_in)
+									);
+		
+		genvar i,j;
+		// we will lay out a collection of dot products since the result of matrix multiplication is a collection of dot products
+		generate
+			for(j=0;j<NUM_COL_MAT;j = j+1) begin: col_mat
+				dotproductInput #(FRACTION_WIDTH,BIT_WIDTH,NUM_COL_VEC) dp(
+										.clk(clk),
+										.start_dot(start),
+										.a_vec(matA),
+										.b_vec(matB_in[j]),
+										.result(result[j]),
+										.done(done_check[j])
+										); 
+		end
+		endgenerate
+		
+endmodule
+module vecMatProdOutput #(parameter FRACTION_WIDTH = 15, parameter BIT_WIDTH = 32,
+				parameter NUM_COL_VEC = 5,	parameter NUM_COL_MAT = 5)
+(
+	input logic clk,start,
+	input logic [BIT_WIDTH-1:0] matA[NUM_COL_VEC-1:0],
+	input logic [BIT_WIDTH-1:0] matB[NUM_COL_VEC-1:0][NUM_COL_MAT-1:0],
+	output logic [BIT_WIDTH-1:0] result[NUM_COL_MAT-1:0],
+	output logic done
+);
+			
+		//check internal done signals
+		logic [NUM_COL_MAT-1:0] done_check;		
+		logic [BIT_WIDTH-1:0] matB_in[NUM_COL_MAT-1:0][NUM_COL_VEC-1:0];
+		
+		assign done = (&done_check)?1'b1:1'b0;
+		
+		// the matrix B to send to multiply is essentially transpose of the input matrix matB
+		transpose #(FRACTION_WIDTH,BIT_WIDTH,NUM_COL_VEC,NUM_COL_MAT) transp(
+										.inMat(matB),
+										.outMat(matB_in)
+									);
+		
+		genvar i,j;
+		// we will lay out a collection of dot products since the result of matrix multiplication is a collection of dot products
+		generate
+			for(j=0;j<NUM_COL_MAT;j = j+1) begin: col_mat
+				dotproductOutput #(FRACTION_WIDTH,BIT_WIDTH,NUM_COL_VEC) dp(
 										.clk(clk),
 										.start_dot(start),
 										.a_vec(matA),
