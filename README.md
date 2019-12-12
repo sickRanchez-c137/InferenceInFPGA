@@ -53,6 +53,6 @@ Class Label 0 if f(x1,x2) = y1+y2 <= 0.00
 
 Following shows the result obtained by running the implementation:
 
-![](images/run.png)
+![](images/run.PNG)
 
 We can see the speed up achieved is 400 times.
